@@ -1,11 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace DES
@@ -13,15 +6,15 @@ namespace DES
     public partial class Form1 : Form
     {
         private const int sizeBlock = 128; //подгоняем размер блока под unicode
-        private const int sizeChar = 16; //размер одного символа 
+        private const int sizeChar = 16; //размер символа 
 
-        private const int shiftKey = 2; //сдвиг ключа 
+        private const int shift = 2; //сдвиг ключа 
 
-        private const int quantityRounds = 16; //количество раундов
+        private const int rounds = 16; //количество раундов
 
         String[] blocks; //блоки в двоичном формате
 
-        String str = ""; //введенное сообщение
+        String txt = ""; //введенное сообщение
         String key = ""; //певый ключ
         String keyStorage = ""; //для хранения первого ключа 
         public Form1()
@@ -33,8 +26,8 @@ namespace DES
 
         private void encrypt_Click(object sender, EventArgs e)
         {
-            str = textBox1.Text.ToString();
-            if (str == "")
+            txt = textBox1.Text.ToString();
+            if (txt == "")
             {
                 MessageBox.Show("Введите сообщение, которое необходимо зашифровать!");
             }
@@ -44,7 +37,7 @@ namespace DES
             /*Генерация ключа*/
 
             key = keyGen();
-            result = encryption(key, str);
+            result = encryption(key, txt);
             keyStorage = keyStorage;
 
            
@@ -55,7 +48,7 @@ namespace DES
         }
         /*Шифрование с помощью ключа IP*/
 
-        private string encryption(String key, String str)
+        private string encryption(String key, String txt)
         {
             String result = "";
 
@@ -70,10 +63,10 @@ namespace DES
                 blocks[i] = stringToBinary(blocks[i]);
             }
 
-            key = keyLenght(key, str.Length / (2 * blocks.Length));
+            key = keyLenght(key, txt.Length / (2 * blocks.Length));
             key = stringToBinary(key);
 
-            for (int j = 0; j < quantityRounds; j++)
+            for (int j = 0; j < rounds; j++)
             {
                 for (int i = 0; i < blocks.Length; i++)
                     blocks[i] = encryptionRound(blocks[i], key);
@@ -107,8 +100,8 @@ namespace DES
         private void decrypt_Click(object sender, EventArgs e)
         {
 
-            str = textBox1.Text.ToString();
-            if (str == "")
+            txt = textBox1.Text.ToString();
+            if (txt == "")
             {
                 MessageBox.Show("Введите сообщение, которое необходимо зашифровать!");
             }
@@ -117,7 +110,7 @@ namespace DES
 
             /*Дешифрование ключом*/
 
-            result = decryption(key, keyStorage, str);
+            result = decryption(key, keyStorage, txt);
             keyStorage = keyStorage;
 
             
@@ -130,13 +123,13 @@ namespace DES
 
         /*Дешифрование при помощи ключа зашифрованного сообщения*/
 
-        private string decryption(String key, String keyStorage, String str)
+        private string decryption(String key, String keyStorage, String txt)
         {
             String result = "";
 
             key = stringToBinary(keyStorage);
 
-            str = stringToBinary(str);
+            txt = stringToBinary(txt);
             /*Разбиваем строку двоичного формата на блоки*/
             blocks = new string[input.Length / sizeBlock];
 
@@ -145,7 +138,7 @@ namespace DES
             for (int i = 0; i < blocks.Length; i++)
                 blocks[i] = input.Substring(i * lengthBlock, lengthBlock);
 
-            for (int j = 0; j < quantityRounds; j++)
+            for (int j = 0; j < rounds; j++)
             {
                 for (int i = 0; i < blocks.Length; i++)
                     blocks[i] = decryptionRound(blocks[i], key);
@@ -278,7 +271,7 @@ namespace DES
 
         private string nextRound(string key)
         {
-            for (int i = 0; i < shiftKey; i++)
+            for (int i = 0; i < shift; i++)
             {
                 key = key[key.Length - 1] + key;
                 key = key.Remove(key.Length - 1);
@@ -291,7 +284,7 @@ namespace DES
 
         private string prevoiusRound(string key)
         {
-            for (int i = 0; i < shiftKey; i++)
+            for (int i = 0; i < shift; i++)
             {
                 key = key + key[0];
                 key = key.Remove(0, 1);
