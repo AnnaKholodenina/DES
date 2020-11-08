@@ -2,9 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
-using System.Diagnostics;
 using System.Drawing;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,176 +12,232 @@ namespace DES
 {
     public partial class Form1 : Form
     {
-        private const int sizeOfBlock = 128; //увеличиваем размер блока под unicode
-        private const int sizeOfChar = 16; //размер одного символа
+        private const int sizeBlock = 128; //подгоняем размер блока под unicode
+        private const int sizeChar = 16; //размер одного символа 
 
         private const int shiftKey = 2; //сдвиг ключа 
 
-        private const int quantityOfRounds = 16; //количество раундов
+        private const int quantityRounds = 16; //количество раундов
 
-        string[] Blocks; //сами блоки в двоичном формате
+        String[] blocks; //блоки в двоичном формате
 
+        String str = ""; //введенное сообщение
+        String key = ""; //певый ключ
+        String keyStorage = ""; //для хранения первого ключа 
         public Form1()
         {
             InitializeComponent();
         }
 
-        //зашифровать
+        /*Шифрование сообщения*/
+
         private void encrypt_Click(object sender, EventArgs e)
         {
-            if (textBox1.Text.Length > 0)
+            str = textBox1.Text.ToString();
+            if (str == "")
             {
-                string s = "";
-
-                string key = textBox1.Text;
-
-                StreamReader sr = new StreamReader("in.txt");
-
-                while (!sr.EndOfStream)
-                {
-                    s += sr.ReadLine();
-                }
-
-                sr.Close();
-
-                s = StringToRightLength(s);
-
-                CutStringIntoBlocks(s);
-
-                key = CorrectKeyWord(key, s.Length / (2 * Blocks.Length));
-                textBox1.Text = key;
-                key = StringToBinaryFormat(key);
-
-                for (int j = 0; j < quantityOfRounds; j++)
-                {
-                    for (int i = 0; i < Blocks.Length; i++)
-                        Blocks[i] = EncodeDES_One_Round(Blocks[i], key);
-
-                    key = NextRound(key);
-                }
-
-                key = PrevRound(key);
-                
-                textBox1.Text = StringFromBinaryToNormalFormat(key);
-                
-                string result = "";
-
-                for (int i = 0; i < Blocks.Length; i++)
-                        result += Blocks[i];
-
-                StreamWriter sw = new StreamWriter("out1.txt");
-                sw.WriteLine(StringFromBinaryToNormalFormat(result));
-                sw.Close();
-
-                Process.Start("out1.txt");
+                MessageBox.Show("Введите сообщение, которое необходимо зашифровать!");
             }
-            else
-                MessageBox.Show("Введите ключевое слово!");
+
+            String result = "";
+
+            /*Генерация ключа*/
+
+            key = keyGen();
+            result = encryption(key, str);
+            keyStorage = keyStorage;
+
+           
+
+            /*Вывод результата*/
+
+            textBox1.Text = result;
+        }
+        /*Шифрование с помощью ключа IP*/
+
+        private string encryption(String key, String str)
+        {
+            String result = "";
+
+            /*Разбить строку в символьном формате на блоки*/
+            blocks = new string[(input.Length * sizeChar) / sizeBlock];
+
+            int lengthBlock = input.Length / blocks.Length;
+
+            for (int i = 0; i < blocks.Length; i++)
+            {
+                blocks[i] = input.Substring(i * lengthBlock, lengthBlock);
+                blocks[i] = stringToBinary(blocks[i]);
+            }
+
+            key = keyLenght(key, str.Length / (2 * blocks.Length));
+            key = stringToBinary(key);
+
+            for (int j = 0; j < quantityRounds; j++)
+            {
+                for (int i = 0; i < blocks.Length; i++)
+                    blocks[i] = encryptionRound(blocks[i], key);
+
+                key = nextRound(key);
+            }
+
+            key = prevoiusRound(key);
+            keyStorage = stringToNormal(key);
+
+            for (int i = 0; i < blocks.Length; i++)
+            {
+                result += blocks[i];
+            }
+
+            return stringToNormal(result);
         }
 
-        //расшифровать
+        /*Раунд шифрования*/
+
+        private string encryptionRound(string input, string key)
+        {
+            string L = input.Substring(0, input.Length / 2);
+            string R = input.Substring(input.Length / 2, input.Length / 2);
+
+            return (R + XOR(L, f(R, key)));
+        }
+
+        /*Дешифрование сообщения*/
+
         private void decrypt_Click(object sender, EventArgs e)
         {
-            if (textBox1.Text.Length > 0)
+
+            str = textBox1.Text.ToString();
+            if (str == "")
             {
-                string s = "";
-
-                string key = StringToBinaryFormat(textBoxDecodeKeyWord.Text);
-
-                StreamReader sr = new StreamReader("out1.txt");
-
-                while (!sr.EndOfStream)
-                {
-                    s += sr.ReadLine();
-                }
-
-                sr.Close();
-
-                s = StringToBinaryFormat(s);
-
-                CutBinaryStringIntoBlocks(s);
-
-                for (int j = 0; j < quantityOfRounds; j++)
-                {
-                    for (int i = 0; i < Blocks.Length; i++)
-                        Blocks[i] = DecodeDES_One_Round(Blocks[i], key);
-
-                    key = PrevRound(key);
-                }
-
-                key = NextRound(key);
-
-                textBox1.Text = StringFromBinaryToNormalFormat(key);
-
-                string result = "";
-
-                for (int i = 0; i < Blocks.Length; i++)
-                    result += Blocks[i];
-
-                StreamWriter sw = new StreamWriter("out2.txt");
-                sw.WriteLine(StringFromBinaryToNormalFormat(result));
-                sw.Close();
-
-                Process.Start("out2.txt");
+                MessageBox.Show("Введите сообщение, которое необходимо зашифровать!");
             }
-            else
-                MessageBox.Show("Введите ключевое слово!");
+
+            String result = "";
+
+            /*Дешифрование ключом*/
+
+            result = decryption(key, keyStorage, str);
+            keyStorage = keyStorage;
+
+            
+
+            /*Вывод результата*/
+
+            textBox1.Text = result;
         }
 
-        //доводим строку до размера, чтобы делилась на sizeOfBlock
-        private string StringToRightLength(string input)
+
+        /*Дешифрование при помощи ключа зашифрованного сообщения*/
+
+        private string decryption(String key, String keyStorage, String str)
         {
-            while (((input.Length * sizeOfChar) % sizeOfBlock) != 0)
+            String result = "";
+
+            key = stringToBinary(keyStorage);
+
+            str = stringToBinary(str);
+            /*Разбиваем строку двоичного формата на блоки*/
+            blocks = new string[input.Length / sizeBlock];
+
+            int lengthBlock = input.Length / blocks.Length;
+
+            for (int i = 0; i < blocks.Length; i++)
+                blocks[i] = input.Substring(i * lengthBlock, lengthBlock);
+
+            for (int j = 0; j < quantityRounds; j++)
+            {
+                for (int i = 0; i < blocks.Length; i++)
+                    blocks[i] = decryptionRound(blocks[i], key);
+
+                key = prevoiusRound(key);
+            }
+
+            key = nextRound(key);
+            keyStorage = stringToNormal(key);
+
+            result = "";
+            for (int i = 0; i < blocks.Length; i++)
+                result += blocks[i];
+
+            return stringToNormal(result);
+        }
+
+
+        /*Генерация ключа*/
+
+        private string keyGen()
+        {
+            Random random = new Random();
+            return random.Next(10000, 100000).ToString();
+        }
+     
+        /*Раунд десшифрования*/
+
+        private string decryptionRound(string input, string key)
+        {
+            string L = input.Substring(0, input.Length / 2);
+            string R = input.Substring(input.Length / 2, input.Length / 2);
+
+            return (XOR(f(L, key), R) + L);
+        }
+
+        /* Метод, доводящий строку до такого размера, чтобы она делилась на 128*/
+
+        private string stringToSizeBlock(string input)
+        {
+            while (((input.Length * sizeChar) % sizeBlock) != 0)
                 input += "#";
 
             return input;
         }
 
-        //разбиение обычной строки на блоки
-        private void CutStringIntoBlocks(string input)
-        {
-            Blocks = new string[(input.Length * sizeOfChar) / sizeOfBlock];
+        /*Метод, переводящий строку в двоичный формат*/
 
-            int lengthOfBlock = input.Length / Blocks.Length;
-
-            for (int i = 0; i < Blocks.Length; i++)
-            {
-                Blocks[i] = input.Substring(i * lengthOfBlock, lengthOfBlock);
-                Blocks[i] = StringToBinaryFormat(Blocks[i]);
-            }
-        }
-
-        //разбиение двоичной строки на блоки
-        private void CutBinaryStringIntoBlocks(string input)
-        {
-            Blocks = new string[input.Length / sizeOfBlock];
-
-            int lengthOfBlock = input.Length / Blocks.Length;
-
-            for (int i = 0; i < Blocks.Length; i++)
-                Blocks[i] = input.Substring(i * lengthOfBlock, lengthOfBlock);
-        }
-
-        //перевод строки в двоичный формат
-        private string StringToBinaryFormat(string input)
+        private string stringToBinary(string input)
         {
             string output = "";
 
             for (int i = 0; i < input.Length; i++)
             {
-                string char_binary = Convert.ToString(input[i], 2);
+                string charBinary = Convert.ToString(input[i], 2);
 
-                while (char_binary.Length < sizeOfChar)
-                    char_binary = "0" + char_binary;
+                while (charBinary.Length < sizeChar)
+                    charBinary = "0" + charBinary;
 
-                output += char_binary;
+                output += charBinary;
             }
 
             return output;
         }
 
-        //доводим длину ключа до нужной
-        private string CorrectKeyWord(string input, int lengthKey)
+        /*Метод, переводящий строку с двоичными данными в символьный формат*/
+
+        private string stringToNormal(string input)
+        {
+            string output = "";
+
+            while (input.Length > 0)
+            {
+                string char_binary = input.Substring(0, sizeChar);
+                input = input.Remove(0, sizeChar);
+
+                int a = 0;
+                int degree = char_binary.Length - 1;
+
+                foreach (char c in char_binary)
+                    a += Convert.ToInt32(c.ToString()) * (int)Math.Pow(2, degree--);
+
+                output += ((char)a).ToString();
+            }
+
+            return output;
+        }
+
+
+        /*Метод, доводящий длину ключа до нужной длины*/
+
+        private string keyLenght(string input, int lengthKey)
         {
             if (input.Length > lengthKey)
                 input = input.Substring(0, lengthKey);
@@ -194,25 +248,8 @@ namespace DES
             return input;
         }
 
-        //шифрование DES один раунд
-        private string EncodeDES_One_Round(string input, string key)
-        {
-            string L = input.Substring(0, input.Length / 2);
-            string R = input.Substring(input.Length / 2, input.Length / 2);
+        /*XOR двух строк с двоичными данными*/
 
-            return (R + XOR(L, f(R, key)));
-        }
-
-        //расшифровка DES один раунд
-        private string DecodeDES_One_Round(string input, string key)
-        {
-            string L = input.Substring(0, input.Length / 2);
-            string R = input.Substring(input.Length / 2, input.Length / 2);
-
-            return (XOR(f(L, key), R) + L);
-        }
-
-        //XOR двух строк с двоичными данными
         private string XOR(string s1, string s2)
         {
             string result = "";
@@ -230,14 +267,16 @@ namespace DES
             return result;
         }
 
-        //шифрующая функция f. в данном случае это XOR
+        /*Функция f*/
+
         private string f(string s1, string s2)
         {
             return XOR(s1, s2);
         }
 
-        //вычисление ключа для следующего раунда шифрования. циклический сдвиг >> 2
-        private string NextRound(string key)
+        /*Вычисление ключа для следующего раунда шифрования*/
+
+        private string nextRound(string key)
         {
             for (int i = 0; i < shiftKey; i++)
             {
@@ -248,8 +287,9 @@ namespace DES
             return key;
         }
 
-        //вычисление ключа для следующего раунда расшифровки. циклический сдвиг << 2
-        private string PrevRound(string key)
+        /*Вычисление ключа для предыдущего раунда (для расшифрования)*/
+
+        private string prevoiusRound(string key)
         {
             for (int i = 0; i < shiftKey; i++)
             {
@@ -260,28 +300,6 @@ namespace DES
             return key;
         }
 
-        //переводим строку с двоичными данными в символьный формат
-        private string StringFromBinaryToNormalFormat(string input)
-        {
-            string output = "";
-
-            while (input.Length > 0)
-            {
-                string char_binary = input.Substring(0, sizeOfChar);
-                input = input.Remove(0, sizeOfChar);
-
-                int a = 0;
-                int degree = char_binary.Length - 1;
-
-                foreach (char c in char_binary)
-                    a += Convert.ToInt32(c.ToString()) * (int)Math.Pow(2, degree--);
-
-                output += ((char)a).ToString();
-            }
-
-            return output;
-        }
-
-
+     
     }
 }
